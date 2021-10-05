@@ -1,0 +1,28 @@
+{
+	"companies": [
+		{
+			"id": "1",
+			"name": "KeycloakDemo",
+			"keycloakAdapterConfig": {
+				"realm": "SharperShape",
+				"auth-server-url": "https://keycloak.eu.sharpershape.services/auth/",
+				"ssl-required": "external",
+				"resource": "ios",
+				"public-client": true,
+				"confidential-port": 0
+			}
+		},
+		{
+			"id": "2",
+			"name": "SDG&E",
+			"keycloakAdapterConfig": {
+				"realm": "SharperShape",
+				"auth-server-url": "https://keycloak.eu.sharpershape.services/auth/",
+				"ssl-required": "external",
+				"resource": "ios",
+				"public-client": true,
+				"confidential-port": 0
+			}
+		}
+	]
+}

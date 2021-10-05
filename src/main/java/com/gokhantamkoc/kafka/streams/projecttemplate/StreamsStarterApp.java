@@ -1,5 +1,6 @@
 package com.gokhantamkoc.kafka.streams.projecttemplate;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -8,6 +9,7 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
 
 public class StreamsStarterApp {
 	public static void main(String[] args) {
@@ -49,9 +51,19 @@ public class StreamsStarterApp {
         
         StreamsBuilder builder = new StreamsBuilder();
 
-        KStream<String, String> kStream = builder.stream("input-topic-name");
-        // do stuff
-        kStream.to("word-count-output");
+        // 1 stream from kafka
+        KStream<String, String> wordCountInputStream = builder.stream("word-count-input");
+        
+        // 2 map values
+        KTable<String, Long> wordCounts = wordCountInputStream.mapValues(value -> value.toLowerCase())
+        
+        // 3 flat map values split by space
+        .flatMapValues(textValue -> Arrays.asList(textValue.split(" ")))
+        .selectKey((ignoreKey, word) -> word)
+        .groupByKey()
+        .count();
+        
+        wordCounts.toStream().to("word-count-output");;
 
         KafkaStreams streams = new KafkaStreams(builder.build(), config);
         streams.cleanUp(); // only do this in dev - not in prod
