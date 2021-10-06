@@ -8,11 +8,21 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Produced;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 
 public class StreamsStarterApp {
 	public static void main(String[] args) {
+
+        BasicConfigurator.configure();
+        Logger.getRootLogger().setLevel(Level.INFO);
+
+        System.out.println("Kafka Streams Template Project Started...");
 		Properties config = new Properties();
 		/*
 		 * application.id config is also group-id for consumer group.
@@ -22,7 +32,6 @@ public class StreamsStarterApp {
 		 * 3) the changelog topic prefix.
 		 */
         config.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-starter-app");
-        
         /*
          * bootstrap.servers: Streams app should connect to a kafka server. i.e. host:port,host:port
          */
@@ -49,30 +58,37 @@ public class StreamsStarterApp {
          * 6. Count occurences in each Group	<"kafka", 2>, <"streams", 1>
          */
         
-        StreamsBuilder builder = new StreamsBuilder();
+        final StreamsBuilder builder = new StreamsBuilder();
 
         // 1 stream from kafka
         KStream<String, String> wordCountInputStream = builder.stream("word-count-input");
         
         // 2 map values
-        KTable<String, Long> wordCounts = wordCountInputStream.mapValues(value -> value.toLowerCase())
+        KTable<String, Long> counter = wordCountInputStream.mapValues(value -> value.toLowerCase())
         
         // 3 flat map values split by space
         .flatMapValues(textValue -> Arrays.asList(textValue.split(" ")))
-        .selectKey((ignoreKey, word) -> word)
+        .selectKey((key, word) -> word)
         .groupByKey()
         .count();
-        
-        wordCounts.toStream().to("word-count-output");;
+        counter.mapValues((k, v) -> k + " count: " + v.toString()).toStream().to("word-count-output");
 
-        KafkaStreams streams = new KafkaStreams(builder.build(), config);
-        streams.cleanUp(); // only do this in dev - not in prod
-        streams.start();
+
+        try {
+            Topology topology = builder.build();
+            // System.out.println("Topology:\n" + topology.describe());
+            KafkaStreams streams = new KafkaStreams(topology, config);
+            streams.cleanUp();
+            streams.start();
+            streams.localThreadsMetadata().forEach(data -> System.out.println(data));
+            Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
 
         // print the topology
-        streams.localThreadsMetadata().forEach(data -> System.out.println(data));
 
         // shutdown hook to correctly close the streams application
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        // Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
 	}
 }
