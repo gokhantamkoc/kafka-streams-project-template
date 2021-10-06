@@ -8,4 +8,4 @@ target/
 .classpath
 
 # Jetbrains products
-/.idea/
+.idea/
